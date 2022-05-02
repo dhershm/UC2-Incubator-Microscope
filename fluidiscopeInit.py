@@ -18,6 +18,12 @@ import unipath as uni
 if fg.i2c:
     from I2CDevice import I2CDevice
     from I2CBus import I2CBus
+elif fg.is_serial:
+    # Quick hack to switch to USB
+    from SerialDevice import SerialDevice as I2CDevice
+elif fg.is_gpio:
+    # Quick hack to switch to GPIO
+    from GPIODevice import GPIODevice as I2CDevice    
 else:
     from MQTTDevice import MQTTDevice
     import paho.mqtt.client as mqtt
@@ -33,6 +39,10 @@ logger = logger_createChild('init','UC2')
 def controller_init():
     if fg.i2c:
         arduino_init()
+    elif fg.is_serial:
+        serial_init()
+    elif fg.is_gpio:        
+        gpio_init()
     else:  # case of e.g. ESP32
         mqtt_init()
     camera_init()
@@ -53,14 +63,69 @@ def camera_init():
 
 def arduino_init():
     # address = I2CBus.scanBus()
-    fg.ledarr = I2CDevice(0x07)  # normally 0x07
-    fg.motors = I2CDevice(0x08)  # normally 0x08
+    # connect to LEDarray    
+    try:
+        fg.ledarr = I2CDevice(0x07)  # normally 0x07
+    except:
+        fg.ledarr = False
+        logger.debug("LEDARray is not connected!")
+
+    # connect to Motors        
+    try:
+        fg.motors = I2CDevice(0x08)  # normally 0x08
+    except:
+        fg.motors = False
+        logger.debug("Motors are not connected!")
+     
+    # connect to Fluo
+    try:
+        fg.fluo = I2CDevice(0x08)
+    except:
+        fg.fluo = False
+        logger.debug("Fluo module isnot connected!")
+        
     # time.sleep(1.0) #because accessing same device
     # sits on the same Arduino as motors for now
-    fg.fluo = I2CDevice(0x08)
     # fg.ledarr.announce()
     # fg.motors.announce()
     #fluidiscopeIO.send(fg.ledarr, "CLEAR")
+
+def serial_init():
+    
+    # Very hacky to have always the same Serial device..    
+    fg.serialdevice = serial.Serial(fg.serialadress, 115200, timeout=.1)
+
+    try:
+        fg.ledarr = I2CDevice(fg.serialdevice)  # normally 0x07
+    except Exception as e:
+        print(e)
+        fg.ledarr = False
+        logger.debug("LEDARray is not connected!")
+
+    # connect to Motors        
+    try:
+        fg.motors = I2CDevice(fg.serialdevice)  # normally 0x08
+    except:
+        fg.motors = False
+        logger.debug("Motors are not connected!")
+     
+    # connect to Fluo
+    try:
+        fg.fluo = I2CDevice(fg.serialdevice)
+    except:
+        fg.fluo = False
+        logger.debug("Fluo module isnot connected!")
+
+
+def gpio_init():
+    
+    # Very hacky to have always the same Serial device..
+    fg.serialdevice = I2CDevice()
+    fg.ledarr = I2CDevice()  # normally 0x07
+    fg.fluo = I2CDevice()
+    fg.motors = I2CDevice()  # normally 0x08
+    
+    
 
 # MQTT Functions ------------------------------------------------------------------------------
 
@@ -75,13 +140,13 @@ def mqtt_init():
 
     # register devices
     fg.raspi = mqtt_register_devices(device_MQTT_name,setup_name)
-    #fg.raspi = MQTTDevice(setup_name, device_MQTT_name)
+    fg.raspi = MQTTDevice(setup_name, device_MQTT_name)
     fg.ledarr = mqtt_register_devices(fg.config['comcat']['mqtt_device_LEDS'],setup_name)
     fg.motors = mqtt_register_devices(fg.config['comcat']['mqtt_device_MOTORS'],setup_name)
     fg.fluo = mqtt_register_devices(fg.config['comcat']['mqtt_device_LASER'],setup_name)
-    #fg.ledarr = MQTTDevice(setup_name,  fg.config['comcat']['mqtt_device_LEDS'])
-    #fg.motors = [MQTTDevice(setup_name, "MOT02"), MQTTDevice(setup_name, "MOT02"), MQTTDevice(setup_name, "MOT01")]
-    #fg.fluo = MQTTDevice(setup_name, "MOT01")
+    fg.ledarr = MQTTDevice(setup_name,  fg.config['comcat']['mqtt_device_LEDS'])
+    fg.motors = [MQTTDevice(setup_name, "MOT02"), MQTTDevice(setup_name, "MOT02"), MQTTDevice(setup_name, "MOT01")]
+    fg.fluo = MQTTDevice(setup_name, "MOT01")
 
 def mqtt_register_devices(devices,setup_name):
     '''
@@ -121,21 +186,21 @@ def mqtt_connect_to_server(broker, mqttclient_name, mqttclient_pass, mqttclient_
     fg.mqttclient.loop_start()
     try:
         logger.info("MQTTClient: connecting to broker ".format(broker))
-        #print("MQTTClient: connecting to broker ", broker)
+        print("MQTTClient: connecting to broker ", broker)
         fg.mqttclient.connect(host=broker, port=port, keepalive=keepalive)
         while not fg.mqttclient.connected_flag and not fg.mqttclient.bad_connection_flag:
             logger.info("MQTTClient: Waiting for established connection.")
-            #print("MQTTClient: Waiting for established connection.")
+            print("MQTTClient: Waiting for established connection.")
             time.sleep(1)
         if fg.mqttclient.bad_connection_flag:
             fg.mqttclient.loop_stop()
             logger.warning(
                 "MQTTClient: had bad-connection. Not trying to connect any further.")
-            #print("MQTTClient: had bad-connection. Not trying to connect any further.")
+            print("MQTTClient: had bad-connection. Not trying to connect any further.")
     except Exception as err:  # e.g. arises when port errors exist etc
         logger.error("MQTTClient: Connection failed")
         logger.error(err)
-        #print("MQTTClient: Connection failed")
+        print("MQTTClient: Connection failed")
         # print(err)
 
     # TODO: spawn Thread that checks for connection status
