@@ -38,8 +38,14 @@ else:
     my_dev_flag = False
 started_first_exp = False
 
+# add serial devices
+is_serial = False
+is_gpio = True
+serialadress = '/dev/ttyUSB0'
+serialdevice = None
+
 i2c = False
-#setup_number = "004"
+setup_number = "001"
 VERSION = '0.4'
 config = []
 EVENT = {}

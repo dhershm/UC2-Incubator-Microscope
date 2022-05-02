@@ -27,6 +27,10 @@ else:
 
 if not fg.my_dev_flag and fg.i2c:
     from I2CDevice import I2CDevice
+elif not fg.my_dev_flag and fg.is_serial:
+    # Quick hack to switch to USB
+    from SerialDevice import SerialDevice as I2CDevice
+
 
 # %%  Code
 # activate logging
@@ -315,8 +319,7 @@ def update_matrix(self, ignore_NA=False, sync_only=True, pattern='CUS'):
                     prop_help = 'scr_light_set_2_grid_' + str(pos)
                     if np.sum(fg.config[pattern_key[0]][pattern_key[1]][row][col]) > 0:
                         self.ids[prop_help].value = 1
-                        self.ids[prop_help].fl_value = fg.config[pattern_key[0]
-                                                                 ][pattern_key[1]][row][col]
+                        self.ids[prop_help].fl_value = fg.config[pattern_key[0]][pattern_key[1]][row][col]
                         toolbox.activate(self.ids[prop_help])
                         #logger.debug("Turn-on light of {} at Pos {} with val {}."format(,[row,col],self.ids[prop_help].fl_value))
                     else:
@@ -325,8 +328,7 @@ def update_matrix(self, ignore_NA=False, sync_only=True, pattern='CUS'):
                         toolbox.deactivate(self.ids[prop_help])
 
                     if not sync_only and np.sum(self.ids[prop_help].fl_value) > 0:
-                        fg.ledarr.send("PXL", pos, list(
-                            self.ids[prop_help].fl_value),logging=1)
+                        fg.ledarr.send("PXL", pos, list(self.ids[prop_help].fl_value),logging == 1)
                         time.sleep(fg.config['experiment']['i2c_send_delay'])
                         #logger.debug("sent:{0} of {1}".format(support_str,type(list(support_str))))
     fg.config['light']['update_matrix_active'] = False

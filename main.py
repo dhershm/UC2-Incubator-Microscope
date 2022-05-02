@@ -1,10 +1,12 @@
 # I/O
 if (1):
     import os
-    os.environ['KIVY_TEXT'] = 'egl_rpi'
+    # os.environ['KIVY_TEXT'] = 'egl_rpi'
     os.environ['KIVY_WINDOW'] = 'sdl2'  # 'egl_rpi'  # 'sdl2'
-    os.environ['KIVY_GL_BACKEND'] = 'gl'
-    #time.sleep(1)
+    #os.environ['KIVY_GL_BACKEND'] = 'gl'
+    # time.sleep(1)
+    from kivy.base import EventLoop
+    EventLoop.ensure_window()
     pass
     # Fluidiscope
 
@@ -52,7 +54,7 @@ fluidiscopeInit.controller_init()
 fluidiscopeInit.GUI_define_sizes()
 
 # activate main-logger
-logger = fl.logger_createChild('main', 'UC2')
+logger = fl.logger_createChild('main','UC2')
 
 # GUI classes
 
@@ -163,8 +165,8 @@ class Fluidiscope(BoxLayout):
     def buttons_light(self, instance):
         toolbox.buttons_light(self, instance)
 
-    # def buttons_light_fluo(self,instance):
-    #    toolbox.buttons_light_fluo(self,instance)
+    def buttons_light_fluo(self,instance):
+        toolbox.buttons_light_fluo(self,instance)
 
     def colorpicker_selected_color(self, instance):
         toolbox.selected_color(self, instance)
@@ -292,7 +294,7 @@ class FluidiscopeApp(App):
         Can be used to implement own pre-call conditions and set pointers. It seems, that 'fluidiscope.kv' is loaded earlier already and hence the last call is not necessary any-more.
         '''
 
-        # self.icon = 'icon.png'
+        self.icon = 'icon.png'
         # print("Thank you for starting Fluidiscopy v%s.\n  Copyright (C) 2017 Benedict Diederich & Rene Richter") % fg.VERSION
         # create the root widget and give it a reference of the application instance (so it can access the application settings)
         self.fluidiscope = Fluidiscope(app=self)
@@ -300,17 +302,17 @@ class FluidiscopeApp(App):
         fg.APP = self.root
 
         # do before creation
-        # self.init_properties(self)
+        #self.init_properties(self)
         
         #call not necessary???
         #return Builder.load_file(uni.Path(fg.code_path, 'fluidiscope.kv'))
 
-    # def after_created(self):
-        # self.set_init_variables
-        # self.init_properties()
-        #self.ids['slider_light_intensity'].value = fg.config['light']['intensity_expt']
-        # self.imaging_set_time_init(self)
-        # print self.ids['slider_light_intensity'].value
+    def after_created(self):
+         self.set_init_variables
+         self.init_properties()
+         self.ids['slider_light_intensity'].value = fg.config['light']['intensity_expt']
+         self.imaging_set_time_init(self)
+         print(self.ids['slider_light_intensity'].value)
 
 
 # ---------- START APP ----------
